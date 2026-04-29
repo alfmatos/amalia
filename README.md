@@ -4,13 +4,14 @@ Three small Python packages for talking to **Amália**, the Portuguese LLM (`ama
 
 ![Amália chat in the terminal](docs/amalia-chat.png)
 
-| Package                          | What it is                                       |
-| -------------------------------- | ------------------------------------------------ |
-| [`amalia-sdk`](./amalia-sdk)     | Synchronous client library (`AmaliaClient`)      |
-| [`amalia-cli`](./amalia-cli)     | One-shot CLI: `amalia "prompt"` or pipe-in       |
-| [`amalia-chat`](./amalia-chat)   | Interactive REPL with live Markdown rendering    |
+| Package                                              | What it is                                                              |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| [`amalia-sdk`](./amalia-sdk)                         | Synchronous client library (`AmaliaClient`)                             |
+| [`amalia-cli`](./amalia-cli)                         | One-shot CLI: `amalia "prompt"` or pipe-in                              |
+| [`amalia-chat`](./amalia-chat)                       | Interactive REPL with live Markdown rendering                           |
+| [`skills/amalia-pt-validate`](./skills/amalia-pt-validate) | Drop-in **Claude Code skill** — lets the agent fact-check pt-PT answers via Amália |
 
-The two apps share all transport, auth, and streaming logic via the SDK — no copy-paste.
+The two apps share all transport, auth, and streaming logic via the SDK — no copy-paste. The skill is independent (pure-stdlib script) so it works without installing the SDK.
 
 ## Requirements
 
@@ -110,6 +111,22 @@ print()
 ```
 
 Errors: `AmaliaAuthError` (401/403), `AmaliaHTTPError` (other non-2xx, exposes `.status_code` and `.body`), `AmaliaError` (base class — also raised on missing config or network failures).
+
+### Claude Code skill — let the agent fact-check itself
+
+Drop the bundled skill into Claude Code so it autonomously consults Amália whenever you ask a Portugal-specific question (law, taxes, public services, education, pt-PT terminology, etc.):
+
+```bash
+mkdir -p ~/.claude/skills
+cp -r skills/amalia-pt-validate ~/.claude/skills/
+
+# Verify
+python3 ~/.claude/skills/amalia-pt-validate/scripts/ask_amalia.py \
+    "Qual o IVA padrão em Portugal continental? Responde só com a percentagem."
+# → 23%
+```
+
+The skill ships with its own credential lookup (env vars or `~/.amalia/creds.txt`) and uses pure Python stdlib — no `pip install` needed. See [`skills/amalia-pt-validate/README.md`](./skills/amalia-pt-validate/README.md) for the full install (project-level / user-level / Codex equivalents) and what triggers it.
 
 ## API notes
 
