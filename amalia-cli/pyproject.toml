@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amalia-cli"
+version = "0.1.0"
+description = "Command-line client for Amália, the Portuguese LLM."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "amalia-sdk",
+]
+
+[project.scripts]
+amalia = "amalia_cli.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["amalia_cli*"]
+
+[tool.uv.sources]
+amalia-sdk = { path = "../amalia-sdk", editable = true }
