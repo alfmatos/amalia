@@ -11,7 +11,7 @@ Three small Python packages for talking to **Amália**, the Portuguese LLM (`ama
 | [`amalia-chat`](./amalia-chat)                       | Interactive REPL with live Markdown rendering                           |
 | [`skills/amalia-pt-validate`](./skills/amalia-pt-validate) | Drop-in **Claude Code skill** — lets the agent fact-check pt-PT answers via Amália |
 
-The two apps share all transport, auth, and streaming logic via the SDK — no copy-paste. The skill is independent (pure-stdlib script) so it works without installing the SDK.
+All four pieces share transport, auth, and streaming logic via the SDK — no copy-paste. The skill is a thin wrapper that calls the `amalia` CLI, so installing the toolkit also makes the skill work.
 
 ## Requirements
 
@@ -120,13 +120,12 @@ Drop the bundled skill into Claude Code so it autonomously consults Amália when
 mkdir -p ~/.claude/skills
 cp -r skills/amalia-pt-validate ~/.claude/skills/
 
-# Verify
-python3 ~/.claude/skills/amalia-pt-validate/scripts/ask_amalia.py \
-    "Qual o IVA padrão em Portugal continental? Responde só com a percentagem."
+# Verify (the skill calls `amalia` under the hood)
+amalia --no-stream "Qual o IVA padrão em Portugal continental? Responde só com a percentagem."
 # → 23%
 ```
 
-The skill ships with its own credential lookup (env vars or `~/.amalia/creds.txt`) and uses pure Python stdlib — no `pip install` needed. See [`skills/amalia-pt-validate/README.md`](./skills/amalia-pt-validate/README.md) for the full install (project-level / user-level / Codex equivalents) and what triggers it.
+The skill is a thin rule layer that tells Claude *when* to invoke `amalia` and *how* to interpret the reply — no duplicated API code. It needs the `amalia` CLI on `PATH` (the install step above) and the same credentials as the rest of the toolkit. See [`skills/amalia-pt-validate/README.md`](./skills/amalia-pt-validate/README.md) for project-level install and Codex equivalents.
 
 ## API notes
 

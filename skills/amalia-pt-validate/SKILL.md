@@ -1,6 +1,6 @@
 ---
 name: amalia-pt-validate
-description: Validate or clarify Portugal-specific (pt-PT) facts by consulting Amália, a Portuguese LLM. Use this whenever the user asks about Portuguese law, taxes (IRS, IRC, IVA, IMI, IMT, IUC), social security, public services (Finanças/AT, Segurança Social, SNS, IMT-IR, Loja do Cidadão, Multibanco, MB Way, chave móvel digital), the education system (matrículas, escolaridade obrigatória, exames nacionais, ensino superior), local government (autarquias, freguesias, câmaras), regions (NUTS, distritos, Açores, Madeira), official procedures, holidays (feriados nacionais e municipais), gastronomia, geography, history, or pt-PT terminology and orthography (vs pt-BR) — and accuracy matters. Skip for code, generic LLM questions, non-Portuguese topics, or trivial small talk. Calls a billed API, so use it as a targeted second opinion, not for batch lookups.
+description: Validate or clarify Portugal-specific (pt-PT) facts by consulting Amália, a Portuguese LLM. Use this whenever the user asks about Portuguese law, taxes (IRS, IRC, IVA, IMI, IMT, IUC), social security, public services (Finanças/AT, Segurança Social, SNS, Loja do Cidadão, Multibanco, MB Way, chave móvel digital), the education system (matrículas, escolaridade obrigatória, exames nacionais, ensino superior), local government (autarquias, freguesias, câmaras), regions (NUTS, distritos, Açores, Madeira), official procedures, holidays (feriados nacionais e municipais), gastronomia, geography, history, or pt-PT terminology and orthography (vs pt-BR) — and accuracy matters. Skip for code, generic LLM questions, non-Portuguese topics, or trivial small talk. Calls a billed API, so use it as a targeted second opinion, not for batch lookups.
 ---
 
 # Amália — Portuguese (PT) fact-check skill
@@ -31,30 +31,22 @@ Examples that **don't** match — do NOT invoke:
 
 ## How to invoke
 
-Call the bundled script. It prints Amália's answer to stdout and exits non-zero on failure.
+The skill uses the `amalia` CLI (from the [amalia-cli](https://github.com/alfmatos/amalia/tree/main/amalia-cli) package). Run:
 
 ```bash
-python3 "$CLAUDE_PROJECT_DIR/.claude/skills/amalia-pt-validate/scripts/ask_amalia.py" "<question in pt-PT or English>"
+amalia --no-stream "<question in pt-PT>"
 ```
 
-If `$CLAUDE_PROJECT_DIR` isn't set (i.e. you installed the skill at user level), use the absolute path to the skill directory instead:
+For follow-up questions in the same task, reuse the same `--thread` id so Amália keeps context server-side:
 
 ```bash
-python3 ~/.claude/skills/amalia-pt-validate/scripts/ask_amalia.py "<question>"
+amalia --no-stream --thread sess-001 "Quantos dias de férias por ano?"
+amalia --no-stream --thread sess-001 "E se for o primeiro ano de trabalho?"
 ```
 
-The script is pure Python stdlib — no `pip install` required. It reads credentials from env vars (`AMALIA_API_KEY`, `AMALIA_AGENT_ID`, `AMALIA_CHANNEL_ID`) or `~/.amalia/creds.txt`.
+Pick any string for the thread id; something like `pt-validate-<short-random>` works well. Use a fresh thread for unrelated questions.
 
-### Multi-turn context
-
-For a follow-up question, reuse the same `--thread` id so Amália keeps context server-side:
-
-```bash
-python3 .../ask_amalia.py --thread sess-001 "Quantos dias de férias por ano?"
-python3 .../ask_amalia.py --thread sess-001 "E se for o primeiro ano de trabalho?"
-```
-
-Pick any string for the thread id; `secrets.token_urlsafe(12)` style works well.
+`--no-stream` makes the CLI buffer the full reply and print once — easier to capture than the streaming default. The CLI exits `0` on success, `1` on API/config errors.
 
 ### Phrasing tips
 
@@ -72,18 +64,29 @@ Pick any string for the thread id; `secrets.token_urlsafe(12)` style works well.
 
 ## Failure handling
 
-If the script exits non-zero, the first line of stderr explains why:
+If `amalia` exits non-zero, stderr explains why:
 
-- `missing credentials: AMALIA_API_KEY, ...` → tell the user how to set creds (see Setup below) and stop.
-- `auth failed (HTTP 401)` → the API key is wrong or revoked.
-- `network error: ...` → transient; you may retry once.
-- `HTTP 5xx` → upstream is down; report and continue without Amália's input.
+- `command not found: amalia` → the CLI isn't installed. Tell the user: `pip install amalia-cli` (or follow the [repo install instructions](https://github.com/alfmatos/amalia#install)). Skip Amália consultation for this turn.
+- `amalia: missing required Amália config: ...` → credentials aren't set. Tell the user how to configure them (env vars or `~/.amalia/creds.txt`, see Setup below) and stop.
+- `amalia: Authentication failed (HTTP 401)` → API key is wrong or revoked.
+- `amalia: Network error ...` → transient; you may retry once.
+- `amalia: HTTP 5xx` → upstream is down; report and continue without Amália's input.
 
 In all failure cases, fall back to your own best answer and **explicitly tell the user** Amália couldn't be consulted, so they know your answer wasn't validated.
 
 ## Setup (one-time, for the user)
 
-Either set environment variables in their shell profile:
+The skill expects two things to already be in place — guide the user through them only if a call fails.
+
+**1. Install the CLI** (one-line, from the [amalia repo](https://github.com/alfmatos/amalia)):
+
+```bash
+pip install -e ./amalia-sdk -e ./amalia-cli   # from a clone of the repo
+```
+
+This puts `amalia` on `PATH`.
+
+**2. Provide credentials.** Either env vars in their shell profile:
 
 ```bash
 export AMALIA_API_KEY=sk-usr-...
@@ -91,6 +94,4 @@ export AMALIA_AGENT_ID=<your-agent-id>
 export AMALIA_CHANNEL_ID=<your-channel-id>
 ```
 
-Or place a `creds.txt` at `~/.amalia/creds.txt` with the format their account ships with (`Endpoint:`, `API Key:`, `ChannelID:` lines). The script reads env first, file second.
-
-Credentials come from [iaedu.pt](https://iaedu.pt/pt). The skill does **not** ship credentials.
+Or a `creds.txt` at `~/.amalia/creds.txt` (the format their account ships with). Credentials come from [iaedu.pt](https://iaedu.pt/pt). The skill does **not** ship credentials.
